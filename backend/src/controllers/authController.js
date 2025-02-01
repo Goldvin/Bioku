@@ -1,47 +1,52 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("./models/user"); // pastikan path ke model user benar
+const User = require("../models/User"); // pastikan path ke model user benar
 
 // Fungsi untuk register
 const register = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-
-    // Validasi jika data sudah ada
-    const userExists = await User.findOne({ where: { email } });
-    if (userExists) {
-      return res.status(400).json({ message: "Email already in use" });
+    try {
+      const { name, email, password } = req.body;
+  
+      // Cek apakah email sudah terdaftar
+      const existingUser = await User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email is already registered' });
+      }
+  
+      // Enkripsi password
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      // Simpan user baru ke database
+      const newUser = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        role: 'user',  // Default role untuk user baru
+      });
+  
+      // Membuat token JWT
+      const token = jwt.sign(
+        { id: newUser.id, email: newUser.email, role: newUser.role },  // Payload
+        process.env.JWT_SECRET_KEY,  // Ganti dengan secret key Anda
+        { expiresIn: '1h' }  // Masa berlaku token (1 jam)
+      );
+  
+      // Kirimkan response dengan token
+      return res.status(201).json({
+        message: 'User registered successfully',
+        token,  // Token yang dihasilkan
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Server error' });
     }
-
-    // Hash password sebelum disimpan
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Simpan user baru ke database
-    const newUser = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role: "user", // set role default sebagai "user"
-    });
-
-    // Buat JWT Token
-    const token = jwt.sign(
-      { id: newUser.id, email: newUser.email, role: newUser.role },
-      process.env.JWT_SECRET_KEY,
-      { expiresIn: "1h" }
-    );
-
-    // Kirim response
-    res.status(201).json({
-      message: "User registered successfully",
-      token,
-      user: newUser,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
+  };
 
 // Fungsi untuk login
 const login = async (req, res) => {
@@ -74,7 +79,7 @@ const login = async (req, res) => {
       user,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error during login:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 };
