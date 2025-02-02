@@ -84,4 +84,30 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+const updateUserRole = async (req, res) => {
+    try {
+      const { userId, role } = req.body;
+  
+      // Pastikan hanya role "admin" dan "user" yang bisa diubah
+      if (!["admin", "user"].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+  
+      // Cari user berdasarkan ID
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+  
+      // Update role user
+      user.role = role;
+      await user.save();
+  
+      res.json({ message: `User role updated to ${role}` });
+    } catch (error) {
+      console.error("Error updating user role:", error.message);
+      res.status(500).json({ message: "Server error" });
+    }
+  };
+
+module.exports = { register, login, updateUserRole };

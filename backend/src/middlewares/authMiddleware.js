@@ -23,4 +23,11 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { verifyToken, isAdmin };
+const isSuperAdmin = (req, res, next) => {
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Access denied. Superadmin only." });
+    }
+    next();
+  };
+
+module.exports = { verifyToken, isAdmin, isSuperAdmin };
